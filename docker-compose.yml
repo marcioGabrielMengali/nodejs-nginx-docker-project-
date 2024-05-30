@@ -1,0 +1,51 @@
+version: "3"
+
+services:
+  web:
+    container_name: app
+    build:
+      context: ./src/app
+      dockerfile: Dockerfile
+    command: node index.js
+    entrypoint: dockerize -wait tcp://db:3306 -timeout 20s docker-entrypoint.sh docker-entrypoint.sh
+    volumes:
+      - ./src/app/:/usr/src/app
+    tty: true
+    depends_on:
+      - db
+    environment:
+      - PORT=3000
+    networks:
+      - challenge-network
+
+  db:
+    image: mysql:latest
+    container_name: db
+    restart: always
+    volumes:
+      - my_sql_nodejs_volume:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: app
+    tty: true
+    networks:
+      - challenge-network
+
+  ngnix:
+    container_name: nginx
+    build:
+      context: ./src/services/nginx
+      dockerfile: Dockerfile
+    ports:
+      - 8080:80
+    depends_on:
+      - db
+    networks:
+      - challenge-network
+
+networks:
+  challenge-network:
+    driver: bridge
+
+volumes:
+  my_sql_nodejs_volume:
